@@ -191,6 +191,7 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | `max_departures` | int | `10` | Max rows per stop (1–20) |
 | `filter_routes` | list | — | Show only these routes |
 | `destination_filter` | list | — | Show only these destinations |
+| `via_filter` | list | — | Rail (PLK): show only trains stopping at any of these stations after this stop (e.g. `Warszawa Zachodnia`); other providers fall back to destination |
 | `filter_platform` | string | — | Show only this platform |
 | `filter_track` | string | — | Show only this track |
 | `highlight_mode` | bool | `false` | Dim instead of hide filtered routes |

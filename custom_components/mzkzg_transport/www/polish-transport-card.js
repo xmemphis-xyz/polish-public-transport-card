@@ -4,7 +4,7 @@
  * Reads data from mzkzg_transport HA integration sensors.
  */
 
-const MZKZG_VERSION = "1.5.0";
+const MZKZG_VERSION = "1.5.1-via";
 
 const LOCALE = {
   pl: {
@@ -184,6 +184,7 @@ function normalizeEntityEntry(item) {
   const entry = { entity: item.entity };
   if ("filter_routes" in item) entry.filter_routes = normalizeList(item.filter_routes);
   if ("destination_filter" in item) entry.destination_filter = normalizeList(item.destination_filter);
+  if ("via_filter" in item) entry.via_filter = normalizeList(item.via_filter);
   if ("filter_platform" in item) entry.filter_platform = item.filter_platform == null ? "" : String(item.filter_platform);
   if ("filter_track" in item) entry.filter_track = item.filter_track == null ? "" : String(item.filter_track);
   if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;
@@ -570,6 +571,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
   _setEntityOverrideFieldsFor(entityId) {
     const routesEl = this.shadowRoot.getElementById("entity_filter_routes");
     const destEl = this.shadowRoot.getElementById("entity_destination_filter");
+    const viaEl = this.shadowRoot.getElementById("entity_via_filter");
     const platformEl = this.shadowRoot.getElementById("entity_filter_platform");
     const trackEl = this.shadowRoot.getElementById("entity_filter_track");
     const realtimeEl = this.shadowRoot.getElementById("entity_realtime_only");
@@ -580,6 +582,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
     const entry = this._getEntityEntryById().get(entityId);
     routesEl.value = Array.isArray(entry?.filter_routes) ? entry.filter_routes.join(", ") : "";
     destEl.value = Array.isArray(entry?.destination_filter) ? entry.destination_filter.join(", ") : "";
+    if (viaEl) viaEl.value = Array.isArray(entry?.via_filter) ? entry.via_filter.join(", ") : "";
     platformEl.value = entry?.filter_platform || "";
     trackEl.value = entry?.filter_track || "";
     realtimeEl.checked = entry?.realtime_only === true;
@@ -593,6 +596,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
     return {
       filter_routes: normalizeList(val("entity_filter_routes")),
       destination_filter: normalizeList(val("entity_destination_filter")),
+      via_filter: normalizeList(val("entity_via_filter")),
       filter_platform: val("entity_filter_platform").trim(),
       filter_track: val("entity_filter_track").trim(),
       realtime_only: checked("entity_realtime_only"),
@@ -656,6 +660,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       const hasLocalOverride = (
         (Array.isArray(merged.filter_routes) && merged.filter_routes.length > 0) ||
         (Array.isArray(merged.destination_filter) && merged.destination_filter.length > 0) ||
+        (Array.isArray(merged.via_filter) && merged.via_filter.length > 0) ||
         !!merged.filter_platform ||
         !!merged.filter_track ||
         merged.realtime_only === true ||
@@ -666,6 +671,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       const clean = { entity: eid };
       if (Array.isArray(merged.filter_routes) && merged.filter_routes.length) clean.filter_routes = merged.filter_routes;
       if (Array.isArray(merged.destination_filter) && merged.destination_filter.length) clean.destination_filter = merged.destination_filter;
+      if (Array.isArray(merged.via_filter) && merged.via_filter.length) clean.via_filter = merged.via_filter;
       if (merged.filter_platform) clean.filter_platform = String(merged.filter_platform);
       if (merged.filter_track) clean.filter_track = String(merged.filter_track);
       if (merged.realtime_only === true) clean.realtime_only = true;
@@ -675,6 +681,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
     });
     const filterRoutes = val("filter_routes").split(",").map(r => r.trim()).filter(Boolean);
     const destFilter = val("destination_filter").split(",").map(s => s.trim()).filter(Boolean);
+    const viaFilter = normalizeList(val("via_filter"));
 
     // Only include fields that differ from card defaults — keeps YAML minimal
     const DEFAULTS = { max_departures:10, display_preset:"standard", view_mode:"mixed", highlight_mode:false, show_delays:true, hide_terminus:true, realtime_only:false, show_footer:true, show_bike:true, show_wheelchair:true, show_ac:true, show_ticket_machine:true, refresh_interval:60};
@@ -702,6 +709,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       view_mode: omit("view_mode", viewMode),
       filter_routes: filterRoutes.length ? filterRoutes : undefined,
       destination_filter: destFilter.length ? destFilter : undefined,
+      via_filter: viaFilter.length ? viaFilter : undefined,
       filter_platform: val("filter_platform") || undefined,
       filter_track: val("filter_track") || undefined,
       highlight_mode: omit("highlight_mode", checked("highlight_mode")),
@@ -865,6 +873,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
             <input id="destination_filter" type="text" value="${escapeHtml((c.destination_filter || []).join(", "))}" placeholder="Wrzeszcz, Oliwa" />
           </div>
           <div class="field">
+            <label for="via_filter">Przez stację (kolej)</label>
+            <input id="via_filter" type="text" value="${escapeHtml((c.via_filter || []).join(", "))}" placeholder="Warszawa Zachodnia" />
+          </div>
+          <div class="field">
             <label for="filter_platform">Peron</label>
             <input id="filter_platform" type="text" value="${escapeHtml(c.filter_platform || "")}" placeholder="np. 1" />
           </div>
@@ -892,6 +904,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
             <div class="field">
               <label for="entity_destination_filter">Kierunki (sensor)</label>
               <input id="entity_destination_filter" type="text" value="${escapeHtml((activeEntry?.destination_filter || []).join(", "))}" placeholder="np. Wrzeszcz" />
+            </div>
+            <div class="field">
+              <label for="entity_via_filter">Przez stację (sensor)</label>
+              <input id="entity_via_filter" type="text" value="${escapeHtml((activeEntry?.via_filter || []).join(", "))}" placeholder="np. Warszawa Zachodnia" />
             </div>
           </div>
           <div class="field-row">
@@ -1080,6 +1096,7 @@ class MzkzgTransportCard extends HTMLElement {
       show_stop_name: config.show_stop_name === true,
       filter_routes: normalizeList(config.filter_routes),
       destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
+      via_filter: normalizeList(config.via_filter),
       filter_platform: config.filter_platform || "",
       filter_track: config.filter_track || "",
       icon: config.icon || "",
@@ -1223,6 +1240,18 @@ class MzkzgTransportCard extends HTMLElement {
       const h = (d.headsign || "").toLowerCase();
       const df = destinationFilters.map(f => String(f).toLowerCase());
       return df.some(f => h.includes(f));
+    });
+
+    // Via filter — keep departures that stop at any of the given stations
+    // after this stop (PLK provides `via`); falls back to headsign otherwise.
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const viaFilters = ("via_filter" in ec) ? ec.via_filter : c.via_filter;
+      if (!viaFilters?.length) return true;
+      const names = (Array.isArray(d.via) && d.via.length ? d.via : [d.headsign || ""])
+        .map(n => String(n).toLowerCase());
+      const vf = viaFilters.map(f => String(f).toLowerCase());
+      return vf.some(f => names.some(n => n.includes(f)));
     });
 
     // Platform/track filter

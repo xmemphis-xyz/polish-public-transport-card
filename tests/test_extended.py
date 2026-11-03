@@ -336,6 +336,50 @@ async def test_plk_with_schedule_data(mock_hass):
     assert dep["provider"] == PROVIDER_PLK
 
 
+@pytest.mark.plk
+@pytest.mark.asyncio
+async def test_plk_via_lists_following_stops(mock_hass):
+    """PLK departures expose the stops after this station as `via`."""
+    from re import compile as re_compile
+    coordinator = MzkzgTransportCoordinator(mock_hass, "34124", PROVIDER_PLK, "", "fake-key")
+    from homeassistant.util import dt as dt_util
+    now = dt_util.now()
+    today = now.strftime("%Y-%m-%d")
+    t = f"{now.hour+1:02d}:30:00" if now.hour < 23 else "23:59:00"
+
+    with aioresponses() as m:
+        m.get(re_compile(r".*/operations.*"), payload={"trains": []})
+        m.get(re_compile(r".*/schedules.*"), payload={
+            "routes": [{
+                "trainNumber": "91982",
+                "carrierCode": "KM",
+                "commercialCategorySymbol": "R1",
+                "operatingDate": today,
+                "stations": [
+                    {"stationId": "100", "departureTime": t, "departureDay": 0},
+                    {"stationId": "34124", "departureTime": t, "departureDay": 0},
+                    {"stationId": "200", "arrivalTime": t, "departureTime": t},
+                    {"stationId": "300"},
+                    {"stationId": "400", "arrivalTime": t},
+                ],
+            }],
+            "dictionaries": {
+                "stations": {
+                    "100": "Pruszków", "34124": "Piastów",
+                    "200": "Warszawa Zachodnia", "300": "Warszawa Ochota",
+                    "400": {"name": "Warszawa Wschodnia"},
+                },
+                "carriers": {"KM": "Koleje Mazowieckie"},
+            },
+        })
+        result = await coordinator._fetch_plk()
+
+    dep = result["departures"][0]
+    assert dep["headsign"] == "Warszawa Wschodnia"
+    # stations before this stop and pass-through ones (no times) are omitted
+    assert dep["via"] == ["Warszawa Zachodnia", "Warszawa Wschodnia"]
+
+
 # ── ZKM edge cases ──────────────────────────────────────────────────────────
 
 @pytest.mark.gdynia
