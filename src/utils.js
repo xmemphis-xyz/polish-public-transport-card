@@ -4,7 +4,7 @@
  * Reads data from mzkzg_transport HA integration sensors.
  */
 
-export const MZKZG_VERSION = "1.6.7-hotfix2";
+export const MZKZG_VERSION = "1.6.7-hotfix2-via";
 
 export const LOCALE = {
   pl: {
@@ -179,6 +179,14 @@ export function normalizeList(value) {
   return String(value).split(",").map(v => v.trim()).filter(Boolean);
 }
 
+// Rail (PLK) departures carry `via` — the stations a train stops at after
+// this stop. Other providers lack it, so fall back to the headsign.
+export function matchesVia(dep, stations) {
+  const names = (Array.isArray(dep.via) && dep.via.length ? dep.via : [dep.headsign || ""])
+    .map(n => String(n).toLowerCase());
+  return stations.some(f => names.some(n => n.includes(String(f).toLowerCase())));
+}
+
 export function normalizeEntityEntry(item) {
   if (typeof item === "string") return { entity: item };
   if (!item || typeof item !== "object" || typeof item.entity !== "string") return null;
@@ -187,6 +195,7 @@ export function normalizeEntityEntry(item) {
   if ("max_departures" in item) entry.max_departures = parseInt(item.max_departures) || null;
   if ("destination_filter" in item) entry.destination_filter = normalizeList(item.destination_filter);
   if ("exclude_destinations" in item) entry.exclude_destinations = normalizeList(item.exclude_destinations);
+  if ("via_filter" in item) entry.via_filter = normalizeList(item.via_filter);
   if ("filter_platform" in item) entry.filter_platform = item.filter_platform == null ? "" : String(item.filter_platform);
   if ("filter_track" in item) entry.filter_track = item.filter_track == null ? "" : String(item.filter_track);
   if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;

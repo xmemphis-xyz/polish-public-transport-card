@@ -611,6 +611,10 @@ var Te = [
 				selector: { text: { multiple: !0 } }
 			},
 			{
+				name: "via_filter",
+				selector: { text: { multiple: !0 } }
+			},
+			{
 				name: "filter_platform",
 				selector: { text: {} }
 			},
@@ -719,6 +723,7 @@ var Te = [
 			filter_routes: "Filtruj linie",
 			destination_filter: "Filtruj kierunki",
 			exclude_destinations: "Wyklucz kierunki",
+			via_filter: "Przez stację (kolej)",
 			filter_platform: "Filtruj peron",
 			filter_track: "Filtruj tor",
 			highlight_mode: "Podświetlaj zamiast ukrywać",
@@ -745,6 +750,7 @@ var Te = [
 			filter_routes: "Filter routes",
 			destination_filter: "Destination filter",
 			exclude_destinations: "Exclude destinations",
+			via_filter: "Via station (rail)",
 			filter_platform: "Filter platform",
 			filter_track: "Filter track",
 			highlight_mode: "Highlight mode",
@@ -807,7 +813,7 @@ var De = {
 	}
 };
 U.directiveName = "unsafeHTML", U.resultType = 1;
-var W = Oe(U), Ae = "1.6.7-hotfix2", G = {
+var W = Oe(U), Ae = "1.6.7-hotfix2-via", G = {
 	pl: {
 		no_entities: "Dodaj encje sensorów w konfiguracji",
 		no_departures: "Brak nadchodzących odjazdów",
@@ -938,6 +944,10 @@ function X(e, t, n = null) {
 		return !isNaN(e) && e <= 20 ? "#ad1457" : "#c62828";
 	}
 	return Ie[t] ? Ie[t] : "#005eb8";
+}
+function ViaMatch(e, t) {
+	let n = (Array.isArray(e.via) && e.via.length ? e.via : [e.headsign || ""]).map((e) => String(e).toLowerCase());
+	return t.some((e) => n.some((t) => t.includes(String(e).toLowerCase())));
 }
 function Ne(e) {
 	return Array.isArray(e) ? e.map((e) => String(e).trim()).filter(Boolean) : e == null ? [] : String(e).split(",").map((e) => e.trim()).filter(Boolean);
@@ -1448,6 +1458,7 @@ ha-card { container-type: inline-size; }
 			filter_routes: Ne(e.filter_routes),
 			destination_filter: Array.isArray(e.destination_filter) ? e.destination_filter : e.destination_filter ? String(e.destination_filter).split(",").map((e) => e.trim()).filter(Boolean) : [],
 			exclude_destinations: Ne(e.exclude_destinations),
+			via_filter: Ne(e.via_filter),
 			filter_platform: e.filter_platform || "",
 			filter_track: e.filter_track || "",
 			icon: e.icon || "",
@@ -1508,7 +1519,7 @@ ha-card { container-type: inline-size; }
 				}));
 			}
 		} else t = this._getAllDepartures();
-		if (e.realtime_only && (t = t.filter((e) => e.realtime)), e.filter_routes.length && (t = t.filter((t) => e.filter_routes.includes(t.route))), e.destination_filter.length && (t = t.filter((t) => e.destination_filter.some((e) => t.headsign && t.headsign.toLowerCase().includes(e.toLowerCase())))), e.exclude_destinations.length && (t = t.filter((t) => !e.exclude_destinations.some((e) => t.headsign && t.headsign.toLowerCase().includes(e.toLowerCase())))), e.filter_platform && (t = t.filter((t) => String(t.platform || "") === String(e.filter_platform))), e.filter_track && (t = t.filter((t) => String(t.track || "") === String(e.filter_track))), e.hide_terminus && t.length && (t = t.filter((e) => !(e.headsign && e._stopName && e.headsign.toLowerCase() === e._stopName.toLowerCase()))), e.highlight_mode) {
+		if (e.realtime_only && (t = t.filter((e) => e.realtime)), e.filter_routes.length && (t = t.filter((t) => e.filter_routes.includes(t.route))), e.destination_filter.length && (t = t.filter((t) => e.destination_filter.some((e) => t.headsign && t.headsign.toLowerCase().includes(e.toLowerCase())))), e.exclude_destinations.length && (t = t.filter((t) => !e.exclude_destinations.some((e) => t.headsign && t.headsign.toLowerCase().includes(e.toLowerCase())))), e.via_filter.length && (t = t.filter((t) => ViaMatch(t, e.via_filter))), e.filter_platform && (t = t.filter((t) => String(t.platform || "") === String(e.filter_platform))), e.filter_track && (t = t.filter((t) => String(t.track || "") === String(e.filter_track))), e.hide_terminus && t.length && (t = t.filter((e) => !(e.headsign && e._stopName && e.headsign.toLowerCase() === e._stopName.toLowerCase()))), e.highlight_mode) {
 			let e = {};
 			for (let n of t) {
 				let t = n.route + "|" + n.headsign;
@@ -1522,6 +1533,8 @@ ha-card { container-type: inline-size; }
 		return t = t.filter((t) => {
 			let n = t._entityConfig && typeof t._entityConfig == "object" ? t._entityConfig : {}, i = Array.isArray(n.exclude_destinations) ? n.exclude_destinations : [];
 			if (i.length && t.headsign && i.some((e) => t.headsign.toLowerCase().includes(String(e).toLowerCase()))) return !1;
+			let v = Ne(n.via_filter);
+			if (v.length && !ViaMatch(t, v)) return !1;
 			let a = parseInt(n.max_departures) || e.max_departures;
 			return r[t._entityId] = (r[t._entityId] || 0) + 1, r[t._entityId] <= a;
 		}), t.slice(0, e.max_departures);

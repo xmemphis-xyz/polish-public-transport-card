@@ -186,8 +186,16 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
 
                 dest_stations = route_stations[i + 1:]
                 dest_id = dest_stations[-1]["stationId"] if dest_stations else ""
-                dest_entry = stations_dict.get(str(dest_id), "")
-                destination = dest_entry if isinstance(dest_entry, str) else dest_entry.get("name", "")
+                destination = _station_name(stations_dict, dest_id)
+                via = [
+                    name
+                    for name in (
+                        _station_name(stations_dict, st.get("stationId"))
+                        for st in dest_stations
+                        if st.get("arrivalTime") or st.get("departureTime")
+                    )
+                    if name
+                ]
 
                 rt = {}
                 is_realtime = False
@@ -223,6 +231,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
                     "platform": stop.get("departurePlatform") or stop.get("platform") or "",
                     "track": stop.get("departureTrack") or stop.get("track") or "",
                     "cancelled": is_cancelled,
+                    "via": via,
                     "provider": PROVIDER_PLK,
                 })
                 break
@@ -236,6 +245,14 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         "departures": departures,
         "last_update": now.isoformat(),
     }
+
+
+def _station_name(stations_dict: dict, station_id) -> str:
+    """Resolve a PLK station id to its name using the schedules dictionary."""
+    if station_id in (None, ""):
+        return ""
+    entry = stations_dict.get(str(station_id), "")
+    return entry if isinstance(entry, str) else (entry or {}).get("name", "")
 
 
 def _time_to_datetime(operating_date: str, time_str: str, day_offset: int = 0) -> datetime:

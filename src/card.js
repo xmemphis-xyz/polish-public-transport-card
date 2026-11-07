@@ -1,6 +1,6 @@
 import { LitElement, html, svg, nothing } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, normalizeActionConfig, fireHassEvent, PROVIDER_HEADER_COLORS } from "./utils.js";
+import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, matchesVia, normalizeActionConfig, fireHassEvent, PROVIDER_HEADER_COLORS } from "./utils.js";
 import { styles } from "./styles.js";
 import { VehicleMap } from "./map.js";
 
@@ -62,6 +62,7 @@ export class MzkzgTransportCard extends LitElement {
       filter_routes: normalizeList(config.filter_routes),
       destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
       exclude_destinations: normalizeList(config.exclude_destinations),
+      via_filter: normalizeList(config.via_filter),
       filter_platform: config.filter_platform || "",
       filter_track: config.filter_track || "",
       icon: config.icon || "",
@@ -141,6 +142,7 @@ export class MzkzgTransportCard extends LitElement {
     if (c.exclude_destinations.length) {
       all = all.filter(d => !c.exclude_destinations.some(df => d.headsign && d.headsign.toLowerCase().includes(df.toLowerCase())));
     }
+    if (c.via_filter.length) all = all.filter(d => matchesVia(d, c.via_filter));
     if (c.filter_platform) all = all.filter(d => String(d.platform || "") === String(c.filter_platform));
     if (c.filter_track) all = all.filter(d => String(d.track || "") === String(c.filter_track));
     
@@ -167,6 +169,8 @@ export class MzkzgTransportCard extends LitElement {
       const ec = d._entityConfig && typeof d._entityConfig === "object" ? d._entityConfig : {};
       const excluded = Array.isArray(ec.exclude_destinations) ? ec.exclude_destinations : [];
       if (excluded.length && d.headsign && excluded.some(x => d.headsign.toLowerCase().includes(String(x).toLowerCase()))) return false;
+      const via = normalizeList(ec.via_filter);
+      if (via.length && !matchesVia(d, via)) return false;
       const cap = parseInt(ec.max_departures) || c.max_departures;
       perEntityCounts[d._entityId] = (perEntityCounts[d._entityId] || 0) + 1;
       return perEntityCounts[d._entityId] <= cap;

@@ -227,6 +227,7 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | `filter_routes` | list | — | Show only these routes |
 | `destination_filter` | list | — | Show only these destinations |
 | `exclude_destinations` | list | — | Hide departures whose destination contains any of these strings |
+| `via_filter` | list | — | Rail (PLK): show only trains stopping at any of these stations after this stop (e.g. `Warszawa Zachodnia`); other providers fall back to destination |
 | `filter_platform` | string | — | Show only this platform |
 | `filter_track` | string | — | Show only this track |
 | `highlight_mode` | bool | `false` | Dim instead of hide filtered routes |
