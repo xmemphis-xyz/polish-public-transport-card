@@ -110,6 +110,8 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # Fork: description/topics are repo settings, not code
+          ignore: description topics
 
   e2e:
     name: Card E2E (optional)
